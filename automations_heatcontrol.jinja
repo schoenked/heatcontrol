@@ -1,0 +1,56 @@
+#generated automation:
+  {% for area in areas() %}
+    {% set trvs = namespace(devices=[]) %}
+    {% for trv in area_devices(area) %}
+      {% for trv_entity in device_entities(trv) %}
+        {% if trv_entity.startswith('climate.') %}
+          {% set trvs.devices = trvs.devices + [trv_entity] %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+    {% if trvs.devices | length > 0 %}
+  - id: 'heatcontrol_{{ area }}'
+    alias: 'Heatcontrol {{ area_name(area) }}'
+    description: ''
+    use_blueprint:
+      path: panhans/advanced_heating_control.yaml
+      input:
+        input_trvs:
+          {% for trv in trvs.devices %}
+            - {{ trv }}
+          {% endfor %}
+        input_temperature_comfort: input_number.comfort_{{ area }}
+        input_temperature_eco: input_number.eco_{{ area }}
+{% for state in states.binary_sensor | sort(attribute='entity_id') %}
+{% if state.name.startswith('Heizen ' + area_name(area)) %}
+        input_presence_sensor: {{ state.entity_id }}
+{% endif %}
+{% endfor %}
+        input_presence_reaction_on_time:
+          hours: 0
+          minutes: 0
+          seconds: 0
+        input_presence_reaction_off_time:
+          hours: 0
+          minutes: 0
+          seconds: 0
+      {% endif %}
+    {% endfor %}
+
+  {% raw %}
+  - id: reset_thermostats
+    alias: Run All Area Automations
+    trigger:
+      - platform: time
+        at: "01:00:00"
+    actions:
+      - data:
+          entity_id: |
+            {{ expand(states.automation)
+              | selectattr('entity_id', 'search', '^automation.heatcontrol_')
+              | map(attribute='entity_id')
+              | list
+            }}
+        action: automation.trigger
+    mode: parallel
+  {% endraw %}

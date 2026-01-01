@@ -1,0 +1,19 @@
+gen binary#generated
+{% for area in areas() %}
+  {%- set trvs = namespace(devices=[]) -%}
+  {%- for trv in area_devices(area) -%}
+    {%- for trv_entity in device_entities(trv) -%}
+      {%- if trv_entity.startswith('climate.') -%}
+        {%- set trvs.devices = trvs.devices + [trv_entity] -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endfor -%}
+{%- if trvs.devices | length > 0 -%}
+heat_offset_{{ area }}:
+    name: "Offset {{ area_name(area) }} Heat"
+    min: 15
+    max: 180
+    step: 15
+    unit_of_measurement: "Minuten"
+{% endif %}
+{% endfor %}

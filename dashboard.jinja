@@ -1,0 +1,90 @@
+{%- set floor_icons = {
+  "kirche": "mdi:church",
+  "keller": "mdi:home-floor-b",
+  "untergeschoss": "mdi:home-floor-negative-1",
+  "erdgeschoss": "mdi:home-floor-0",
+  "1_og": "mdi:home-floor-1",
+  "2_og": "mdi:home-floor-2"
+} -%}
+
+views:
+  - title: Übersicht
+    path: home
+    icon: mdi:information-variant
+    sections:
+      - type: grid
+        title: Übersicht
+        cards:
+          - type: custom:auto-entities
+            card:
+              type: entities
+              title: 🪫⚠️ Low Battery Devices
+              show_header_toggle: false
+            filter:
+              include:
+                - attributes:
+                    device_class: battery
+                  state: < 21
+            sort:
+              - method: area
+              - method: state
+                numeric: true
+          - type: custom:auto-entities
+            card:
+              type: entities
+              title: 🌡️🔥 Heizbetrieb
+            filter:
+              include:
+                - options: {}
+                  name: Heizen *
+                  state: 'on'
+                  sort:
+                    method: domain
+              exclude: []
+
+  {%- for floor, icon in floor_icons.items() %}
+  {%- set floor_areas = floor_areas(floor) -%}
+  {%- if floor_areas %}
+  - title: {{ floor_name(floor) }}
+    path: {{ floor | lower }}
+    icon: {{ icon }}
+    sections:
+      - type: grid
+        title: {{ floor_name(floor) }}
+        cards:
+          {%- for area in floor_areas %}
+          - type: heading
+            heading: {{ area_name(area) }}
+            heading_style: title
+          - type: entities
+            entities:
+              - entity: input_number.eco_{{ area }}
+                name: Eco {{ area_name(area) }}
+                secondary_info: last-changed
+              - entity: input_number.comfort_{{ area }}
+                name: Komfort {{ area_name(area) }}
+                secondary_info: last-changed
+              - entity: input_number.heat_offset_{{ area }}
+                name: Offset {{ area_name(area) }}
+                secondary_info: last-changed
+          - type: history-graph
+            entities:
+              {%- for state in states.binary_sensor | sort(attribute='entity_id') -%}
+                {%- if state.name.startswith('Heizen ' + area_name(area)) %}
+                - entity: {{ state.entity_id }}
+                  {%- endif -%}
+                {%- endfor -%}
+                {%- for trv in area_devices(area) -%}
+                {%- for trv_entity in device_entities(trv) -%}
+                {%- if trv_entity.startswith('climate.') %}
+                - entity: {{ trv_entity }}
+                  {%- endif -%}
+                  {%- endfor -%}
+                {%- endfor %}
+            name: Heizverlauf
+            hours_to_show: 8
+          {%- endfor %}
+
+        column_span: 4
+  {%- endif -%}
+  {%- endfor %}

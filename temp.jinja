@@ -1,0 +1,35 @@
+{%- for area in areas() -%}
+  {%- if labels(area) | select('match', '^heatcontrol_') | list | count > 0 -%}
+    {%- set trvs = namespace(devices=[]) -%}
+    {%- for trv in area_devices(area) -%}
+      {%- for trv_entity in device_entities(trv) -%}
+        {%- if trv_entity.startswith('climate.') -%}
+          {%- set trvs.devices = trvs.devices + [trv_entity] -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endfor -%}
+    {%- if trvs.devices | length > 0 -%}
+      {# --- Konfiguration: Sonderbehandlung für Kirche --- #}
+      {%- if area == 'kirche' -%}
+        {%- set c = {'e_min': 5, 'e_max': 20, 'c_min': 5, 'c_max': 20} -%}
+      {%- else -%}
+        {%- set c = {'e_min': 15, 'e_max': 20, 'c_min': 20, 'c_max': 25} -%}
+      {%- endif -%}
+      {# -------------------------------------------------- #}
+eco_{{ area }}:
+    name: "Eco {{ area_name(area) }}"
+    min: {{ c.e_min }}
+    max: {{ c.e_max }}
+    step: 1
+    unit_of_measurement: "°C"
+    mode: slider
+comfort_{{ area }}:
+    name: "Komfort {{ area_name(area) }}"
+    min: {{ c.c_min }}
+    max: {{ c.c_max }}
+    step: 1
+    unit_of_measurement: "°C"
+    mode: slider
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
