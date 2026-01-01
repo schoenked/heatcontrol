@@ -1,0 +1,2 @@
+# heatcontrol
+Homeassistant heatcontrol generator
