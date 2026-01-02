@@ -1,17 +1,17 @@
 binary_sensor:
 {% for area in areas() %}
-    {% set trvs = namespace(devices=[]) %}
-    {% for trv in area_devices(area) %}
-        {% for trv_entity in device_entities(trv) %}
-            {% if trv_entity.startswith('climate.') %}
-                {% set trvs.devices = trvs.devices + [trv_entity] %}
-            {% endif %}
-        {% endfor %}
+{% set trvs = namespace(devices=[]) %}
+{% for trv in area_devices(area) %}
+    {% for trv_entity in device_entities(trv) %}
+        {% if trv_entity.startswith('climate.') %}
+            {% set trvs.devices = trvs.devices + [trv_entity] %}
+        {% endif %}
     {% endfor %}
-    {% if trvs.devices | length > 0 %}
-        - name: "Heizen {{ area_name(area) }}"
-        unique_id: isHeating_{{ area }}
-        state: >-
+{% endfor %}
+{% if trvs.devices | length > 0 %}
+  - name: "Heizen {{ area_name(area) }}"
+    unique_id: isHeating_{{ area }}
+    state: >-
         {{ "{% set selected_area = '" }}{{ area }}{{ "' %}" }}
         {% raw %}
             {% set heat_offset = states("input_number.heat_offset_" + selected_area) | int %}
@@ -32,5 +32,5 @@ binary_sensor:
             {% endfor %}
             {{ result1.data }}
         {% endraw %}
-    {% endif %}
+{% endif %}
 {% endfor %}
