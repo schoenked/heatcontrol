@@ -53,6 +53,15 @@ views:
         title: {{ floor_name(floor) }}
         cards:
           {%- for area in floor_areas %}
+              {%- set trvs = namespace(devices=[]) -%}
+              {%- for trv in area_devices(area) -%}
+                  {%- for trv_entity in device_entities(trv) -%}
+                      {%- if trv_entity.startswith('climate.') -%}
+                          {%- set trvs.devices = trvs.devices + [trv_entity] -%}
+                      {%- endif -%}
+                  {%- endfor -%}
+              {%- endfor -%}
+              {%- if trvs.devices | length > 0 -%}
           - type: heading
             heading: {{ area_name(area) }}
             heading_style: title
@@ -83,6 +92,7 @@ views:
                 {%- endfor %}
             name: Heizverlauf
             hours_to_show: 8
+              {%- endif -%}
           {%- endfor %}
 
         column_span: 4
