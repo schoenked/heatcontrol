@@ -1,26 +1,36 @@
 binary_sensor:
 {% for area in areas() %}
-  - name: "Heizen {{ area_name(area) }}"
-    unique_id: isHeating_{{ area }}
-    state: >-
-      {{"{% set selected_area = '"}}{{ area }}{{"' %}"}}
-      {% raw %}
-      {% set heat_offset = states("input_number.heat_offset_" + selected_area) | int %}
-      {% set result1 = namespace(data=false) %}
-      {% for label in labels(selected_area) %}
-        {% for cal in label_entities(label) %}
-          {% set start_time = state_attr(cal, 'start_time') %}
-          {% set end_time = state_attr(cal, 'end_time') %}
-          {% if start_time and end_time %}
+    {% set trvs = namespace(devices=[]) %}
+    {% for trv in area_devices(area) %}
+        {% for trv_entity in device_entities(trv) %}
+            {% if trv_entity.startswith('climate.') %}
+                {% set trvs.devices = trvs.devices + [trv_entity] %}
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+    {% if trvs.devices | length > 0 %}
+        - name: "Heizen {{ area_name(area) }}"
+        unique_id: isHeating_{{ area }}
+        state: >-
+        {{ "{% set selected_area = '" }}{{ area }}{{ "' %}" }}
+        {% raw %}
+            {% set heat_offset = states("input_number.heat_offset_" + selected_area) | int %}
+            {% set result1 = namespace(data=false) %}
+            {% for label in labels(selected_area) %}
+            {% for cal in label_entities(label) %}
+            {% set start_time = state_attr(cal, 'start_time') %}
+            {% set end_time = state_attr(cal, 'end_time') %}
+            {% if start_time and end_time %}
             {% set start = as_datetime(start_time).astimezone() %}
             {% set end = as_datetime(end_time).astimezone() %}
             {% set now = now().astimezone() %}
             {% if (start - timedelta(minutes=heat_offset)) <= now and now <= end %}
-              {% set result1.data = true %}
+            {% set result1.data = true %}
             {% endif %}
-          {% endif %}
-        {% endfor %}
-      {% endfor %}
-      {{ result1.data }}
-      {% endraw %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+            {{ result1.data }}
+        {% endraw %}
+    {% endif %}
 {% endfor %}
