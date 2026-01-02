@@ -1,6 +1,7 @@
 import requests
 import sys
 import os
+import glob
 
 # Configuration: File paths
 URL_FILE = "hass_url.local"
@@ -24,10 +25,8 @@ HASS_TOKEN = read_config_file(TOKEN_FILE)
 
 def render_template(template_str):
     """
-    Sends a Jinja2 template to Home Assistant to be rendered
-    with access to the full state machine.
+    Sends a Jinja2 template to Home Assistant to be rendered.
     """
-    # Remove trailing slash from URL if present to prevent double slashes
     base_url = HASS_URL.rstrip('/')
     api_endpoint = f"{base_url}/api/template"
 
@@ -36,40 +35,58 @@ def render_template(template_str):
         "Content-Type": "application/json",
     }
 
-    payload = {
-        "template": template_str
-    }
+    payload = {"template": template_str}
 
     try:
         response = requests.post(api_endpoint, headers=headers, json=payload, timeout=10)
         response.raise_for_status()
         return response.text
-
     except requests.exceptions.HTTPError as err:
-        print(f"HTTP Error: {err}")
-        if response is not None:
-            print(f"Response: {response.text}")
+        print(f"  [API Error] HTTP Error: {err}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"  [API Error] Request Failed: {e}")
     return None
 
+def process_jinja_files():
+    """Finds all .jinja files, renders them, removes empty lines, and writes to .yaml."""
+    jinja_files = glob.glob("*.jinja")
+
+    if not jinja_files:
+        print("No *.jinja files found in the current directory.")
+        return
+
+    print(f"Found {len(jinja_files)} jinja file(s). Processing...\n")
+
+    for input_file in jinja_files:
+        # Determine output filename (example.jinja -> example.yaml)
+        base_name = os.path.splitext(input_file)[0]
+        output_file = f"{base_name}.yaml"
+
+        print(f"Processing '{input_file}' -> '{output_file}'...")
+
+        try:
+            with open(input_file, "r", encoding="utf-8") as f:
+                template_content = f.read()
+
+            rendered_content = render_template(template_content)
+
+            if rendered_content is not None:
+                # Remove empty lines (including lines that are just whitespace)
+                lines = rendered_content.splitlines()
+                non_empty_lines = [line for line in lines if line.strip()]
+                final_content = "\n".join(non_empty_lines)
+
+                with open(output_file, "w", encoding="utf-8") as f:
+                    f.write(final_content)
+                    # Add a trailing newline for valid POSIX file standards
+                    f.write("\n")
+                print("  Success.")
+            else:
+                print("  Skipped writing file due to render error.")
+
+        except Exception as e:
+            print(f"  [File Error] Could not process file: {e}")
+
 if __name__ == "__main__":
-    # Example 1: Simple state check
-    jinja_code = "{{ states('sun.sun') }}"
-
-    # Example 2: Complex logic
-    complex_jinja = """
-    {% for light in states.light | selectattr('state', 'eq', 'on') | list %}
-      - {{ light.name }} is on
-    {% else %}
-      No lights are on.
-    {% endfor %}
-    """
-
-    print(f"--- Connecting to {HASS_URL} ---")
-
-    print("\n--- Rendering Simple Template ---")
-    print(render_template(jinja_code))
-
-    print("\n--- Rendering Complex Template ---")
-    print(render_template(complex_jinja))
+    print(f"--- Connected to {HASS_URL} ---")
+    process_jinja_files()
