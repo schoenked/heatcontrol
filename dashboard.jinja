@@ -61,7 +61,7 @@ views:
                       {%- endif -%}
                   {%- endfor -%}
               {%- endfor -%}
-              {%- if trvs.devices | length > 0 -%}
+              {% if trvs.devices | length > 0 %}
           - type: heading
             heading: {{ area_name(area) }}
             heading_style: title
