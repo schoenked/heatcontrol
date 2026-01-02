@@ -1,5 +1,4 @@
 {%- for area in areas() -%}
-  {%- if labels(area) | select('match', '^heatcontrol_') | list | count > 0 -%}
     {%- set trvs = namespace(devices=[]) -%}
     {%- for trv in area_devices(area) -%}
       {%- for trv_entity in device_entities(trv) -%}
@@ -31,5 +30,4 @@ comfort_{{ area }}:
     unit_of_measurement: "°C"
     mode: slider
     {%- endif -%}
-  {%- endif -%}
 {%- endfor -%}
