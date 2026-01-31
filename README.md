@@ -62,3 +62,7 @@ Run the script using Python:
 
 ```bash
 python generator.py
+```
+
+# TODO
+- [ ] Dashboard - sortiere Areas nach 1. Menge der Geräte, 2. Höhe der KOmforttemperatur 
