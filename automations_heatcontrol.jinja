@@ -42,7 +42,13 @@
     alias: Run All Area Automations
     trigger:
       - platform: time
+        at: "23:00:00"
+      - platform: time
+        at: "00:00:00"
+      - platform: time
         at: "01:00:00"
+      - platform: time
+        at: "02:00:00"
     actions:
       - data:
           entity_id: |
