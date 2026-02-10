@@ -95,7 +95,7 @@ views:
 
                     {# Build the list entry #}
                     {%- set cal_name = state_attr(cal.entity_id, 'friendly_name') or cal.entity_id -%}
-                    {%- set md_content.lines = md_content.lines + ['- **' ~ cal_name ] -%}
+                    {%- set md_content.lines = md_content.lines + ['- ' ~ cal_name ] -%}
                  {%- endif -%}
               {%- endfor -%}
 
