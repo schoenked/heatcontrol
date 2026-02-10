@@ -8,182 +8,182 @@
 } -%}
 
 views:
-- title: Übersicht
-path: home
-icon: mdi:information-variant
-sections:
-- type: grid
-title: Übersicht
-cards:
-- type: custom:auto-entities
-card:
-type: entities
-title: 🪫⚠️ Low Battery Devices
-show_header_toggle: false
-filter:
-include:
-- attributes:
-device_class: battery
-state: < 21
-sort:
-- method: area
-- method: state
-numeric: true
-- type: custom:auto-entities
-card:
-type: entities
-title: 🌡️🔥 Heizbetrieb
-filter:
-include:
-- options: {}
-name: Heizen *
-state: 'on'
-sort:
-method: domain
-exclude: []
+  - title: Übersicht
+    path: home
+    icon: mdi:information-variant
+    sections:
+      - type: grid
+        title: Übersicht
+        cards:
+          - type: custom:auto-entities
+            card:
+              type: entities
+              title: 🪫⚠️ Low Battery Devices
+              show_header_toggle: false
+            filter:
+              include:
+                - attributes:
+                    device_class: battery
+                  state: < 21
+            sort:
+              - method: area
+              - method: state
+                numeric: true
+          - type: custom:auto-entities
+            card:
+              type: entities
+              title: 🌡️🔥 Heizbetrieb
+            filter:
+              include:
+                - options: {}
+                  name: Heizen *
+                  state: 'on'
+                  sort:
+                    method: domain
+              exclude: []
 
-{%- for floor, icon in floor_icons.items() %}
-    {%- set floor_areas_list = floor_areas(floor) -%}
-    {%- if floor_areas_list %}
-        - title: {{ floor_name(floor) }}
-        path: {{ floor | lower }}
-        icon: {{ icon }}
-        sections:
-        - type: grid
+  {%- for floor, icon in floor_icons.items() %}
+  {%- set floor_areas_list = floor_areas(floor) -%}
+  {%- if floor_areas_list %}
+  - title: {{ floor_name(floor) }}
+    path: {{ floor | lower }}
+    icon: {{ icon }}
+    sections:
+      - type: grid
         title: {{ floor_name(floor) }}
         column_span: 4
         cards:
-        {# --- SORTING LOGIC START --- #}
-        {%- set ns = namespace(areas_with_counts=[]) -%}
-        {%- for area in floor_areas_list -%}
+          {# --- SORTING LOGIC START --- #}
+          {%- set ns = namespace(areas_with_counts=[]) -%}
+          {%- for area in floor_areas_list -%}
             {%- set count = area_devices(area) | count -%}
             {%- set ns.areas_with_counts = ns.areas_with_counts + [{'id': area, 'count': count}] -%}
-        {%- endfor -%}
-        {# --- SORTING LOGIC END --- #}
+          {%- endfor -%}
+          {# --- SORTING LOGIC END --- #}
 
-        {%- for item in ns.areas_with_counts | sort(attribute='count', reverse=true) %}
-            {%- set area = item.id -%}
-            {%- set trvs = namespace(devices=[]) -%}
+          {%- for item in ns.areas_with_counts | sort(attribute='count', reverse=true) %}
+              {%- set area = item.id -%}
+              {%- set trvs = namespace(devices=[]) -%}
 
-            {# Identify climate entities in this area #}
-            {%- for device_id in area_devices(area) -%}
-                {%- for entity_id in device_entities(device_id) -%}
-                    {%- if entity_id.startswith('climate.') -%}
-                        {%- set trvs.devices = trvs.devices + [entity_id] -%}
-                    {%- endif -%}
-                {%- endfor -%}
-            {%- endfor -%}
+              {# Identify climate entities in this area #}
+              {%- for device_id in area_devices(area) -%}
+                  {%- for entity_id in device_entities(device_id) -%}
+                      {%- if entity_id.startswith('climate.') -%}
+                          {%- set trvs.devices = trvs.devices + [entity_id] -%}
+                      {%- endif -%}
+                  {%- endfor -%}
+              {%- endfor -%}
 
-            {# Identify calendar entities that share a 'heatcontrol_*' label with the area #}
-            {%- set area_cals = namespace(entities=[]) -%}
-            {%- set current_area_labels = labels(area) -%}
+              {# Identify calendar entities that share a 'heatcontrol_*' label with the area #}
+              {%- set area_cals = namespace(entities=[]) -%}
+              {%- set current_area_labels = labels(area) -%}
 
-            {# Pre-calculate Markdown lines as a LIST to avoid indentation errors #}
-            {%- set md_content = namespace(lines=[]) -%}
+              {# Pre-calculate Markdown lines as a LIST to avoid indentation errors #}
+              {%- set md_content = namespace(lines=[]) -%}
 
-            {%- for cal in states.calendar -%}
-                {%- set match = namespace(found=false) -%}
-                {%- for label in current_area_labels -%}
+              {%- for cal in states.calendar -%}
+                 {%- set match = namespace(found=false) -%}
+                 {%- for label in current_area_labels -%}
                     {# Check if label starts with 'heatcontrol_' AND is present on the calendar #}
                     {%- if label.startswith('heatcontrol_') and label in labels(cal.entity_id) -%}
-                        {%- set match.found = true -%}
+                       {%- set match.found = true -%}
                     {%- endif -%}
-                {%- endfor -%}
+                 {%- endfor -%}
 
-                {%- if match.found -%}
+                 {%- if match.found -%}
                     {%- set area_cals.entities = area_cals.entities + [cal.entity_id] -%}
 
                     {# Build the list entry #}
                     {%- set cal_name = state_attr(cal.entity_id, 'friendly_name') or cal.entity_id -%}
-                    {%- set md_content.lines = md_content.lines + ['- ' ~ cal_name ] -%}
-                {%- endif -%}
-            {%- endfor -%}
+                    {%- set md_content.lines = md_content.lines + ['- **' ~ cal_name ] -%}
+                 {%- endif -%}
+              {%- endfor -%}
 
-            {%- if trvs.devices | length > 0 %}
-                - type: heading
-                heading: {{ area_name(area) }}
-                heading_style: title
+              {%- if trvs.devices | length > 0 %}
+          - type: heading
+            heading: {{ area_name(area) }}
+            heading_style: title
 
-                - type: entities
-                entities:
-                - type: custom:template-entity-row
+          - type: entities
+            entities:
+              - type: custom:template-entity-row
                 entity: input_number.eco_{{ area }}
                 name: Eco {{ area_name(area) }}
                 state: "{{ '{{' }} states('input_number.eco_{{ area }}') {{ '}}' }} °C"
                 secondary: "{{ '{{' }} relative_time(states.input_number.eco_{{ area }}.last_changed) {{ '}}' }}"
                 tap_action:
-                action: more-info
-                - type: custom:template-entity-row
+                  action: more-info
+              - type: custom:template-entity-row
                 entity: input_number.comfort_{{ area }}
                 name: Komfort {{ area_name(area) }}
                 state: "{{ '{{' }} states('input_number.comfort_{{ area }}') {{ '}}' }} °C"
                 secondary: "{{ '{{' }} relative_time(states.input_number.comfort_{{ area }}.last_changed) {{ '}}' }}"
                 tap_action:
-                action: more-info
-                - type: custom:template-entity-row
+                  action: more-info
+              - type: custom:template-entity-row
                 entity: input_number.heat_offset_{{ area }}
                 name: Offset {{ area_name(area) }}
                 state: "{{ '{{' }} states('input_number.heat_offset_{{ area }}') | int {{ '}}' }} min"
                 secondary: "{{ '{{' }} relative_time(states.input_number.heat_offset_{{ area }}.last_changed) {{ '}}' }}"
                 tap_action:
-                action: more-info
+                  action: more-info
 
-                {# --- COLLAPSED THERMOSTAT GROUP --- #}
-                - type: custom:expander-card
-                title: Thermostate ({{ trvs.devices | length }})
-                expanded: false
-                cards:
-                {%- for trv_entity in trvs.devices %}
-                    - type: thermostat
-                    entity: {{ trv_entity }}
-                {%- endfor %}
+          {# --- COLLAPSED THERMOSTAT GROUP --- #}
+          - type: custom:expander-card
+            title: Thermostate ({{ trvs.devices | length }})
+            expanded: false
+            cards:
+              {%- for trv_entity in trvs.devices %}
+              - type: thermostat
+                entity: {{ trv_entity }}
+              {%- endfor %}
 
-                {# --- COLLAPSED CALENDAR GROUP --- #}
-                {%- if area_cals.entities | length > 0 %}
-                    - type: custom:expander-card
-                    title: Kalender ({{ area_cals.entities | length }})
-                    expanded: false
-                    cards:
-                    - type: markdown
-                    content: |
-                    {%- for line in md_content.lines %}
-                        {{ line }}
-                    {%- endfor %}
-                    - type: calendar
-                    entities:
-                    {%- for cal_entity in area_cals.entities %}
-                        - {{ cal_entity }}
-                    {%- endfor %}
-                    initial_view: list
-                    title: Termine
-                {%- endif %}
-
-                {# --- PREPARE ENTITY LIST FOR GRAPH & URL --- #}
-                {%- set history_list = namespace(entities=[]) -%}
-                {%- for state in states.binary_sensor | sort(attribute='entity_id') -%}
-                    {%- if state.name.startswith('Heizen ' + area_name(area)) %}
-                        {%- set history_list.entities = history_list.entities + [state.entity_id] -%}
-                    {%- endif -%}
-                {%- endfor -%}
-                {%- for trv_entity in trvs.devices %}
-                    {%- set history_list.entities = history_list.entities + [trv_entity] -%}
-                {%- endfor %}
-
-                - type: history-graph
+          {# --- COLLAPSED CALENDAR GROUP --- #}
+          {%- if area_cals.entities | length > 0 %}
+          - type: custom:expander-card
+            title: Kalender ({{ area_cals.entities | length }})
+            expanded: false
+            cards:
+              - type: markdown
+                content: |
+                  {%- for line in md_content.lines %}
+                  {{ line }}
+                  {%- endfor %}
+              - type: calendar
                 entities:
-                {%- for entity in history_list.entities %}
-                    - {{ entity }}
-                {%- endfor %}
-                name: Heizverlauf
-                hours_to_show: 24
+                  {%- for cal_entity in area_cals.entities %}
+                  - {{ cal_entity }}
+                  {%- endfor %}
+                initial_view: list
+                title: Termine
+          {%- endif %}
 
-                - type: button
-                name: Mehr im Verlauf anzeigen
-                icon: mdi:history
-                tap_action:
-                action: navigate
-                navigation_path: /history?entity_id={{ history_list.entities | join(',') }}
+          {# --- PREPARE ENTITY LIST FOR GRAPH & URL --- #}
+          {%- set history_list = namespace(entities=[]) -%}
+          {%- for state in states.binary_sensor | sort(attribute='entity_id') -%}
+            {%- if state.name.startswith('Heizen ' + area_name(area)) %}
+              {%- set history_list.entities = history_list.entities + [state.entity_id] -%}
             {%- endif -%}
-        {%- endfor %}
-    {%- endif -%}
-{%- endfor %}
+          {%- endfor -%}
+          {%- for trv_entity in trvs.devices %}
+            {%- set history_list.entities = history_list.entities + [trv_entity] -%}
+          {%- endfor %}
+
+          - type: history-graph
+            entities:
+              {%- for entity in history_list.entities %}
+              - {{ entity }}
+              {%- endfor %}
+            name: Heizverlauf
+            hours_to_show: 24
+
+          - type: button
+            name: Mehr im Verlauf anzeigen
+            icon: mdi:history
+            tap_action:
+              action: navigate
+              navigation_path: /history?entity_id={{ history_list.entities | join(',') }}
+              {%- endif -%}
+          {%- endfor %}
+  {%- endif -%}
+  {%- endfor %}
